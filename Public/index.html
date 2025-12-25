@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lyrical Streamer v2</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;700&display=swap" rel="stylesheet">
+<style>
+body { margin:0; font-family:'Fira Code', monospace; color:#00ff99; overflow-x:hidden; }
+canvas#matrixBG { position: fixed; top:0; left:0; width:100%; height:100%; z-index:-1; }
+.navbar a { color: #00ff99; margin: 0 1rem; font-weight: 500; }
+.section-title { font-size:1.5rem; font-weight:700; margin-bottom:1rem; color:#00ff99; }
+.card { background: rgba(0,0,0,0.6); border-radius:0.5rem; padding:1rem; box-shadow:0 0 10px #00ff99; transition: transform 0.3s, box-shadow 0.3s; }
+.card:hover { transform: translateY(-5px); box-shadow:0 0 20px #00ff99; }
+.video-thumb { border-radius:0.5rem; }
+#chatOverlay { position:fixed; bottom:10px; right:10px; width:300px; max-height:400px; background:rgba(0,0,0,0.8); padding:10px; border-radius:0.5rem; overflow-y:auto; }
+#chatOverlay input { width:80%; padding:5px; background:black; color:#0f0; border:none; }
+#chatOverlay button { width:18%; padding:5px; background:green; color:white; border:none; }
+</style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+<canvas id="matrixBG"></canvas>
+
+<nav class="navbar p-4 flex justify-between items-center z-10 relative">
+  <div class="text-2xl font-bold">Lyrical Streamer v2</div>
+  <div>
+    <a href="#searchSection">Search</a>
+    <a href="#trending">Trending</a>
+    <a href="#live">Live</a>
+    <a href="#recommendations">AI Recs</a>
+    <a href="#history">History</a>
+    <a href="#favorites">Favorites</a>
+  </div>
+</nav>
+
+<main class="flex-grow p-8 space-y-12 z-10 relative">
+
+  <!-- Login -->
+  <section id="loginSection">
+    <h2 class="section-title">User Login</h2>
+    <input type="text" id="username" placeholder="Enter username" class="p-2 bg-black/60 rounded text-white">
+    <button onclick="login()" class="p-2 bg-green-600 rounded ml-2">Login</button>
+    <div id="welcome" class="mt-2"></div>
+  </section>
+
+  <!-- Search -->
+  <section id="searchSection">
+    <h2 class="section-title">Search Streams / Videos</h2>
+    <div class="flex gap-2">
+      <input id="searchInput" type="text" placeholder="Search YouTube..." class="flex-grow p-2 bg-black/60 text-white rounded">
+      <button onclick="performSearch()" class="p-2 bg-green-600 rounded hover:bg-green-700">Search</button>
+    </div>
+    <div id="searchResults" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4"></div>
+  </section>
+
+  <!-- Trending -->
+  <section id="trending">
+    <h2 class="section-title">Trending Videos</h2>
+    <div id="trendingList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+  </section>
+
+  <!-- Live -->
+  <section id="live">
+    <h2 class="section-title">Live Streams</h2>
+    <div id="liveList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+  </section>
+
+  <!-- AI Recommendations -->
+  <section id="recommendations">
+    <h2 class="section-title">AI Recommendations</h2>
+    <div id="recommendationList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+  </section>
+
+  <!-- Watch History -->
+  <section id="history">
+    <h2 class="section-title">Watch History</h2>
+    <div id="historyList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+  </section>
+
+  <!-- Favorites -->
+  <section id="favorites">
+    <h2 class="section-title">Favorites</h2>
+    <div id="favoritesList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+  </section>
+
+</main>
+
+<!-- Chat Overlay -->
+<div id="chatOverlay">
+  <div id="chatMessages"></div>
+  <input type="text" id="chatInput" placeholder="Message...">
+  <button onclick="sendMessage()">Send</button>
+</div>
+
+<footer class="p-4 text-center bg-black/70 text-green-400 z-10 relative">&copy; 2025 Lyrical Streamer. All rights reserved.</footer>
+
+<script>
+const matrixCanvas=document.getElementById('matrixBG');
+const ctx=matrixCanvas.getContext('2d');
+let w=matrixCanvas.width=window.innerWidth;
+let h=matrixCanvas.height=window.innerHeight;
+const cols=Math.floor(w/20)+1;
+const ypos=Array(cols).fill(0);
+function matrixEffect(){
+ctx.fillStyle='rgba(0,0,0,0.05)';
+ctx.fillRect(0,0,w,h);
+ctx.fillStyle='#0f0';
+ctx.font='15pt monospace';
+for(let i=0;i<cols;i++){
+const text=String.fromCharCode(Math.random()*128);
+ctx.fillText(text,i*20,ypos[i]*20);
+if(ypos[i]*20>h&&Math.random()>0.975)ypos[i]=0;
+ypos[i]++;
+}}
+setInterval(matrixEffect,50);
+window.onresize=()=>{w=matrixCanvas.width=window.innerWidth;h=matrixCanvas.height=window.innerHeight;};
+
+function login(){
+const username=document.getElementById('username').value.trim();
+if(!username)return alert('Enter username');
+localStorage.setItem('username',username);
+document.getElementById('welcome').textContent=`Welcome, ${username}!`;
+}
+function sendMessage(){
+const msgInput=document.getElementById('chatInput');
+const msg=msgInput.value.trim();
+if(!msg)return;
+const chatMessages=document.getElementById('chatMessages');
+const user=localStorage.getItem('username')||'Guest';
+const entry=document.createElement('div');
+entry.textContent=`${user}: ${msg}`;
+chatMessages.appendChild(entry);
+msgInput.value='';
+chatMessages.scrollTop=chatMessages.scrollHeight;
+}
+async function fetchYouTube(type,query=''){
+const res=await fetch(`/youtube/${type}?q=${encodeURIComponent(query)}`);
+return await res.json();
+}
+function createVideoCard(item,isSearch=false){
+const id=isSearch?item.id.videoId:item.id;
+const title=item.snippet.title;
+const thumb=item.snippet.thumbnails.high.url;
+return `<div class="card">
+<img src="${thumb}" alt="${title}" class="video-thumb w-full">
+<h3 class="mt-2 font-bold">${title}</h3>
+<button onclick="playVideo('${id}')" class="mt-2 p-2 bg-green-600 rounded hover:bg-green-700">Play</button>
+<button onclick="addToHistory('${id}','${title}','${thumb}')" class="mt-2 p-2 bg-blue-600 rounded hover:bg-blue-700">History</button>
+<button onclick="addToFavorites('${id}','${title}','${thumb}')" class="mt-2 p-2 bg-purple-600 rounded hover:bg-purple-700">Favorite</button>
+</div>`;
+}
+function playVideo(videoId){
+const embedHTML=`<div class="fixed inset-0 bg-black/90 flex justify-center items-center z-50">
+<iframe width="80%" height="70%" src="https://www.youtube.com/embed/${videoId}?autoplay=1" frameborder="0" allowfullscreen></iframe>
+<button onclick="closePlayer()" class="absolute top-4 right-4 p-3 bg-red-700 text-white font-bold rounded">X</button>
+</div>`;
+document.body.insertAdjacentHTML('beforeend',embedHTML);
+}
+function closePlayer(){document.querySelector('iframe')?.parentElement.remove();}
+function addToHistory(id,title,thumb){
+const history=JSON.parse(localStorage.getItem('history')||'[]');
+history.unshift({id,title,thumb});
+localStorage.setItem('history',JSON.stringify(history));
+renderHistory();
+}
+function addToFavorites(id,title,thumb){
+const fav=JSON.parse(localStorage.getItem('favorites')||'[]');
+fav.unshift({id,title,thumb});
+localStorage.setItem('favorites',JSON.stringify(fav));
+renderFavorites();
+}
+function renderHistory(){
+const history=JSON.parse(localStorage.getItem('history')||'[]');
+document.getElementById('historyList').innerHTML=history.map(v=>createVideoCard(v,true)).join('');
+}
+function renderFavorites(){
+const fav=JSON.parse(localStorage.getItem('favorites')||'[]');
+document.getElementById('favoritesList').innerHTML=fav.map(v=>createVideoCard(v,true)).join('');
+}
+function renderRecommendations(){
+const history=JSON.parse(localStorage.getItem('history')||'[]');
+const trending=document.getElementById('trendingList').children;
+const recs=[];
+for(let i=0;i<3;i++){
+if(history[i])recs.push(history[i]);
+else if(trending[i])recs.push({id:trending[i].querySelector('button').onclick.toString().match(/'([^']+)'/)[1],title:trending[i].querySelector('h3').innerText,thumb:trending[i].querySelector('img').src});
+}
+document.getElementById('recommendationList').innerHTML=recs.map(v=>createVideoCard(v,true)).join('');
+}
+async function loadSections(){
+const trending=await fetchYouTube('trending');
+document.getElementById('trendingList').innerHTML=trending.items.map(v=>createVideoCard(v)).join('');
+const live=await fetchYouTube('live');
+document.getElementById('liveList').innerHTML=live.items.map(v=>createVideoCard(v,true)).join('');
+renderHistory();
+renderFavorites();
+renderRecommendations();
+}
+async function performSearch(){
+const query=document.getElementById('searchInput').value.trim();
+if(!query)return;
+const data=await fetchYouTube('search',query);
+document.getElementById('searchResults').innerHTML=data.items.map(v=>createVideoCard(v,true)).join('');
+}
+window.onload=loadSections;
+</script>
+</body>
+</html>
